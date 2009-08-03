@@ -1,6 +1,8 @@
 
 module Elliptic where
 
+import Maybe
+
 -- (x,y) point or infinity
 data Point = Point Int Int | Infinity
 
@@ -29,4 +31,22 @@ points (Curve a b m) =
     True <- return $ ((y^2) `mod` m) == ((x^3 + a*x + b) `mod` m)
     return $ Point x y
 
+-- modular inverse
+-- (mInverse x m) x `mod` m == 1
+modInverse :: Int -> Int -> Maybe Int
+modInverse x m =
+  listToMaybe $ do
+    x' <- [0..m-1]
+    True <- return $ ((x * x') `mod` m) == 1
+    return x'
+
+-- somewhat inspired by this code:
+-- http://programmingpraxis.com/2009/07/31/elliptic-curve-factorization/2/
+-- addPoints :: EllipticCurve -> Point -> Point -> Point
+addPoints (Curve a b m) (Point x y) (Point u v) =
+  let (Just d) = modInverse (u - x) m in
+  let n = v - y in
+  let x' = ((n*d)^2 - (x + u)) `mod` m in
+  let y' = ((n*d*(x-x'))-y) `mod` m in
+  Point x' y'
 
