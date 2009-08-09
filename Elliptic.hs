@@ -1,19 +1,16 @@
 
 module Elliptic where
 
-import Maybe
+-- todo: instance Num Point (?)
 
 -- (x,y) point or infinity
-data Point = Point Int Int | Infinity | Debug Int Int Int Int
+data Point = Point Int Int | Infinity
 
 instance Show Point where
   show Infinity = "inf"
   show (Point x y) =
     "("++(show x)++","
     ++(show y)++")"
-  show (Debug a b c d) =
-    (show a) ++ " " ++ (show b) ++ " " ++
-    (show c) ++ " " ++ (show d)
 
 -- a, b, m
 data EllipticCurve = Curve Int Int Int
@@ -25,6 +22,7 @@ instance Show EllipticCurve where
     " (mod "++(show m)++")"
 
 -- slow (O(n^2)) algorithm for finding points in an elliptic curve
+-- (temporary function for testing; todo: improve or remove)
 points :: EllipticCurve -> [Point]
 points (Curve a b m) =
   Infinity :
@@ -34,44 +32,34 @@ points (Curve a b m) =
     True <- return $ ((y^2) `mod` m) == ((x^3 + a*x + b) `mod` m)
     return $ Point x y
 
--- modular inverse
--- (mInverse x m) x `mod` m == 1
--- this is a slow brute force algorithm, there are better
-modInverse :: Int -> Int -> Maybe Int
-modInverse x m =
-  listToMaybe $ do
-    x' <- [0..m-1]
-    True <- return $ ((x * x') `mod` m) == 1
-    return x'
-
--- somewhat inspired by this code:
--- http://programmingpraxis.com/2009/07/31/elliptic-curve-factorization/2/
-
 addPoints :: EllipticCurve -> Point -> Point -> Point
 
 addPoints _ Infinity p2 = p2
 addPoints _ p1 Infinity = p1
 
--- todo: factor out duplicate code
+addPoints _ (Point x1 y1) (Point x2 y2)
+    | x1 == x2 && y1 /= y2      = Infinity
+
 -- todo: check that point lies on curve
-addPoints (Curve a b m) (Point x y) (Point u v)
-    | (x, y) == (u, v) =
-        if ((y + v) `mod` m) == 0 then
-            Infinity
-        else
-            let n = (3 * x * x) + a in
-            let (Just d) = (modInverse (2 * y) m) in
-            let x' = ((n*d)^2 - (x + u)) `mod` m in
-            let y' = ((n*d*(x-x'))-y) `mod` m in
-            Point x' y'
-
-addPoints (Curve a b m) (Point x y) (Point u v) =
-  let (Just d) = modInverse (u - x) m in
-  let n = v - y in
-  let x' = ((n*d)^2 - (x + u)) `mod` m in
-  let y' = ((n*d*(x-x'))-y) `mod` m in
-  Point x' y'
-
+-- todo: better way to make rationals
+-- todo: mod earlier to simplify calculations
+-- todo: unit test this code
+addPoints (Curve a b m) (Point x1 y1) (Point x2 y2) =
+    let slope =
+            if (x1, y1) == (x2, y2) then
+            -- slope is the tangent of the curve at that point
+                (toRational ((3 * (x1 ^ 2)) + a))
+                / (toRational (2 * y1))
+            else
+            -- slope is slope of the two distinct points
+                (toRational (y2 - y1))
+                / (toRational (x2 - x1)) in
+    let x3  = -x1 - x2 + (floor slope^2) in
+    let x3' = x3 `mod` m in
+    let y3  = -y1 + (floor (slope * (toRational (x1 - x3)))) in
+    let y3' = y3 `mod` m in
+    Point x3' y3'
+    
 negatePoint :: EllipticCurve -> Point -> Point
 negatePoint (Curve _ _ m) (Point x y) = Point x ((-y) `mod` m)
 negatePoint _ Infinity = Infinity
