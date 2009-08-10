@@ -4,6 +4,8 @@ module Elliptic where
 import Ratio
 
 -- todo: instance Num Point (?)
+-- should points be aware of their curve?
+-- is this where functors come in?
 
 -- (x,y) point or infinity
 data Point = Point Int Int | Infinity
@@ -23,9 +25,18 @@ instance Show EllipticCurve where
     "x + "++(show b)++
     " (mod "++(show m)++")"
 
+pointEq :: EllipticCurve -> Point -> Point -> Bool
+pointEq _ Infinity Infinity = True
+pointEq (Curve a b m) (Point x1 y1) (Point x2 y2) =
+    (x1 `mod` m) == (x2 `mod` m) &&
+    (y1 `mod` m) == (y2 `mod` m)
+pointEq _ Infinity _ = False
+pointEq _ _ Infinity = False
+
 -- point on curve
 pointOnCurve :: EllipticCurve -> Point -> Bool
 pointOnCurve (Curve a b m) (Point x y) = ((y^2) `mod` m) == ((x^3 + a*x + b) `mod` m)
+pointOnCurve _ Infinity = True
 
 -- slow (O(n^2)) algorithm for finding points in an elliptic curve
 -- (temporary function for testing; todo: improve or remove)
@@ -38,6 +49,10 @@ points (Curve a b m) =
     True <- return $ pointOnCurve (Curve a b m) (Point x y)
     return $ Point x y
 
+-- todo: this algorithm is broken
+-- for example:
+-- addPoints (Curve 4 4 5) (Point 0 2) (Point 4 3) == (Point 1 4)
+-- but should == (Point 2 0)
 addPoints :: EllipticCurve -> Point -> Point -> Point
 
 addPoints _ Infinity p2 = p2
@@ -47,7 +62,6 @@ addPoints _ (Point x1 y1) (Point x2 y2)
     | x1 == x2 && y1 /= y2      = Infinity
 
 -- todo: mod earlier to simplify calculations
--- todo: unit test this code
 addPoints (Curve a b m) (Point x1 y1) (Point x2 y2)
     | not $ pointOnCurve (Curve a b m) (Point x1 y1)  = error "Point 1 does not lie on curve"
     | not $ pointOnCurve (Curve a b m) (Point x2 y2)  = error "Point 2 does not lie on curve"
