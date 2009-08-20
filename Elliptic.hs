@@ -1,7 +1,7 @@
 
 module Elliptic where
 
-import Ratio
+import Maybe
 
 -- todo: instance Num Point (?)
 -- should points be aware of their curve?
@@ -66,16 +66,18 @@ addPoints (Curve a b m) (Point x1 y1) (Point x2 y2)
     | not $ pointOnCurve (Curve a b m) (Point x1 y1)  = error "Point 1 does not lie on curve"
     | not $ pointOnCurve (Curve a b m) (Point x2 y2)  = error "Point 2 does not lie on curve"
     | otherwise =
+        let grab (Just x) = x in
+        let a // b = a * (grab (modInverse b m)) in
         let slope =
                 if (x1, y1) == (x2, y2) then
                 -- slope is the tangent of the curve at that point
-                    ((3 * (x1 ^ 2)) + a) % (2 * y1)
+                    ((3 * (x1 ^ 2)) + a) // (2 * y1)
                 else
                 -- slope is slope of the two distinct points
-                    (y2 - y1) % (x2 - x1) in
-        let x3  = -x1 - x2 + (floor slope^2) in
+                    (y2 - y1) // (x2 - x1) in
+        let x3  = -x1 - x2 + slope^2 in
         let x3' = x3 `mod` m in
-        let y3  = -y1 + (floor (slope * ((x1 - x3) % 1))) in
+        let y3  = -y1 + (slope * (x1 - x3)) in
         let y3' = y3 `mod` m in
         Point x3' y3'
     
@@ -85,4 +87,14 @@ negatePoint _ Infinity = Infinity
 
 subtractPoints :: EllipticCurve -> Point -> Point -> Point
 subtractPoints c p1 p2 = addPoints c p1 (negatePoint c p2)
+
+-- modular inverse
+-- (mInverse x m) x `mod` m == 1
+-- this is a slow brute force algorithm, there are better
+modInverse :: Int -> Int -> Maybe Int
+modInverse x m =
+  listToMaybe $ do
+    x' <- [0..m-1]
+    True <- return $ ((x * x') `mod` m) == 1
+    return x'
 
