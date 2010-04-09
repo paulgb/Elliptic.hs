@@ -26,7 +26,8 @@ tests = test [
     "Point not on curve" ~: (pointOnCurve c1 (Point 2 1)) ~=? False,
     "Infinity on curve" ~: (pointOnCurve c1 Infinity) ~=? True,
     -- Add points
-    (pointEq c1 (addPoints c1 p3 p5) p1) ~? "Add Points"
+    (pointEq c1 (addPoints c1 p3 p5) p1) ~? "Add Points",
+    (pointEq c1 (subtractPoints c1 p3 p2) p5) ~? "Subtract Points"
     ]
 
 main = (runTestTT tests) >> (return ())

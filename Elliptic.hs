@@ -49,10 +49,6 @@ points (Curve a b m) =
     True <- return $ pointOnCurve (Curve a b m) (Point x y)
     return $ Point x y
 
--- todo: this algorithm is broken
--- for example:
--- addPoints (Curve 4 4 5) (Point 0 2) (Point 4 3) == (Point 1 4)
--- but should == (Point 2 0)
 addPoints :: EllipticCurve -> Point -> Point -> Point
 
 addPoints _ Infinity p2 = p2
@@ -97,4 +93,5 @@ modInverse x m =
     x' <- [0..m-1]
     True <- return $ ((x * x') `mod` m) == 1
     return x'
+
 
